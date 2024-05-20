@@ -77,12 +77,3 @@ diff([ None, 1 ], [1])
 ```
 
 might result in `[ (None, 1) ]` or `None` (i.e. no diff).
-
-## Building/Uploading
-
-```sh
-# Create venv with dependencies
-python -m venv .venv
-source .venv/bin/activate
-pip install 
-```
