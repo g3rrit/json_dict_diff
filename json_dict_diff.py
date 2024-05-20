@@ -1,8 +1,6 @@
-import builtins
+from typing import List, Dict, Union, Tuple, Set
 
-from typing import Type
-
-type JDict = int | float | str | list["Result"] | dict[str, "Result"] | tuple["Result"] | set["Result"] | None
+JDict = Union[int, float, str, List["Result"], Dict[str, "Result"], Tuple["Result"], Set["Result"], None]
 
 
 class ValidationException(Exception):
@@ -25,61 +23,58 @@ def _similarity_score(a: JDict, b: JDict) -> float:
     if a is None or b is None:
         return 0
 
-    t: Type = type(a)
-
     # If they have the same type at least return 0.5
-    match t:
-        case builtins.int | builtins.str | builtins.float | builtins.bool:
-            if a == b:
-                return 1
-            else:
-                return 0.5
+    if isinstance(a, (int, str, float, bool)):
+        if a == b:
+            return 1
+        else:
+            return 0.5
 
-        case builtins.tuple | builtins.list | builtins.set:
-            a = list(a)
-            b = list(b)
+    elif isinstance(a, (tuple, list, set)):
+        a = list(a)
+        b = list(b)
 
-            if not a or not b:
-                return 0.5
+        if not a or not b:
+            return 0.5
 
-            # Find best match witch score matrix,
-            # remove best match and find best score again of the reduced lists
-            score_matrix = []
+        # Find best match witch score matrix,
+        # remove best match and find best score again of the reduced lists
+        score_matrix = []
 
-            for i1, v1 in enumerate(a):
-                for i2, v2 in enumerate(b):
-                    score_matrix.append(((i1, i2), _similarity_score(v1, v2)))
+        for i1, v1 in enumerate(a):
+            for i2, v2 in enumerate(b):
+                score_matrix.append(((i1, i2), _similarity_score(v1, v2)))
 
-            score_matrix.sort(key=lambda x: x[1], reverse=True)
+        score_matrix.sort(key=lambda x: x[1], reverse=True)
 
-            # We can assume that at least one element is present
-            res = score_matrix[0][1]
+        # We can assume that at least one element is present
+        res = score_matrix[0][1]
 
-            a_updated = a.copy()
-            b_updated = b.copy()
+        a_updated = a.copy()
+        b_updated = b.copy()
 
-            del a_updated[score_matrix[0][0][0]]
-            del b_updated[score_matrix[0][0][1]]
+        del a_updated[score_matrix[0][0][0]]
+        del b_updated[score_matrix[0][0][1]]
 
-            res += _similarity_score(a_updated, b_updated)
+        res += _similarity_score(a_updated, b_updated)
 
-            return res
+        return res
 
-        case builtins.dict:
+    elif isinstance(a, dict):
 
-            if not a or not b:
-                return 1
+        if not a or not b:
+            return 1
 
-            res = 1
+        res = 1
 
-            for k1, v1 in a.items():
-                if k1 in b.keys():
-                    res += _similarity_score(v1, b[k1])
+        for k1, v1 in a.items():
+            if k1 in b.keys():
+                res += _similarity_score(v1, b[k1])
 
-            return res
+        return res
 
-        case _:
-            raise ValidationException(f"Invalid type  => [{t}]")
+    else:
+        raise ValidationException(f"Invalid type  => [{type(a)}]")
 
 
 def _diff(a: JDict, b: JDict) -> JDict:
@@ -98,71 +93,68 @@ def _diff(a: JDict, b: JDict) -> JDict:
     if b is None:
         return (a, None)
 
-    t: Type = type(a)
+    if isinstance(a, (int, str, float, bool)):
+        if a == b:
+            return None
+        else:
+            return (a, b)
 
-    match t:
-        case builtins.int | builtins.str | builtins.float | builtins.bool:
-            if a == b:
-                return None
+    elif isinstance(a, (tuple, list, set)):
+        a = list(a)
+        b = list(b)
+
+        res = []
+
+        # Find most suitable match for each element in a
+        b_updated = b.copy()
+        for v1 in a:
+            b_found = 0 if len(b_updated) > 0 else None
+            score = 0
+            for i, v2 in enumerate(b_updated):
+                if (s := _similarity_score(v1, v2)) > score:
+                    b_found = i
+                    score = s
+
+            # If we did not find a match assume that the element was deleted
+            # If we did, append their diff
+            if b_found is None:
+                res.append((v1, None))
             else:
-                return (a, b)
+                if (d := diff(v1, b_updated[b_found])) is not None:
+                    res.append(d)
+                del b_updated[b_found]
 
-        case builtins.tuple | builtins.list | builtins.set:
-            a = list(a)
-            b = list(b)
+        # Add remaining elements in bas newly created
+        for v2 in b_updated:
+            if v2 is not None:
+                res.append((None, v2))
 
-            res = []
+        if not res:
+            return None
 
-            # Find most suitable match for each element in a
-            b_updated = b.copy()
-            for v1 in a:
-                b_found = 0 if len(b_updated) > 0 else None
-                score = 0
-                for i, v2 in enumerate(b_updated):
-                    if (s := _similarity_score(v1, v2)) > score:
-                        b_found = i
-                        score = s
+        return res
 
-                # If we did not find a match assume that the element was deleted
-                # If we did, append their diff
-                if b_found is None:
-                    res.append((v1, None))
-                else:
-                    if (d := diff(v1, b_updated[b_found])) is not None:
-                        res.append(d)
-                    del b_updated[b_found]
+    elif isinstance(a, dict):
+        res = {}
 
-            # Add remaining elements in bas newly created
-            for v2 in b_updated:
-                if v2 is not None:
-                    res.append((None, v2))
+        b_updated = b.copy()
+        for k1, v1 in a.items():
+            if k1 in b_updated.keys():
+                if (d := diff(v1, b_updated[k1])) is not None:
+                    res[k1] = d
+                del b_updated[k1]
 
-            if not res:
-                return None
+        # Add remaninig elements in b as newly created
+        for k2, v2 in b_updated.items():
+            res[k2] = (None, v2)
 
-            return res
+        if not res:
+            return None
 
-        case builtins.dict:
-            res = {}
+        return res
 
-            b_updated = b.copy()
-            for k1, v1 in a.items():
-                if k1 in b_updated.keys():
-                    if (d := diff(v1, b_updated[k1])) is not None:
-                        res[k1] = d
-                    del b_updated[k1]
-
-            # Add remaninig elements in b as newly created
-            for k2, v2 in b_updated.items():
-                res[k2] = (None, v2)
-
-            if not res:
-                return None
-
-            return res
-
-        case _:
-            raise ValidationException(f"Invalid type => [{t}]")
+    else:
+        raise ValidationException(f"Invalid type => [{t}]")
 
 
 def validate(a: JDict):
@@ -173,19 +165,18 @@ def validate(a: JDict):
     if a is None:
         return
 
-    match type(a):
-        case builtins.int | builtins.str | builtins.float | builtins.bool:
-            return
-        case builtins.tuple | builtins.list | builtins.set:
-            for v in a:
-                validate(v)
-        case builtins.dict:
-            for k, v in a.items():
-                if not isinstance(k, str):
-                    raise ValidationException(f"Invalid type => [{type(a)}]")
-                validate(v)
-        case _:
-            raise ValidationException(f"Invalid type => [{type(a)}]")
+    if isinstance(a, (int, str, float, bool)):
+        return
+    elif isinstance(a, (tuple, list, set)):
+        for v in a:
+            validate(v)
+    elif isinstance(a, dict):
+        for k, v in a.items():
+            if not isinstance(k, str):
+                raise ValidationException(f"Invalid type => [{type(a)}]")
+            validate(v)
+    else:
+        raise ValidationException(f"Invalid type => [{type(a)}]")
 
 
 def diff(a: JDict, b: JDict) -> JDict:

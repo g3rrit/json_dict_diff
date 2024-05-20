@@ -32,7 +32,7 @@ If a object of any different type is used anywhere in a dict/list/..., a `Valida
 ## Exports
 
 ```py
-type JDict = int | float | str | list["Result"] | dict[str, "Result"] | tuple["Result"] | set["Result"] | None
+JDict = Union[int, float, str, List["Result"], Dict[str, "Result"], Tuple["Result"], Set["Result"], None]
 
 class ValidationException
 
