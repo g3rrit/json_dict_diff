@@ -154,7 +154,7 @@ def _diff(a: JDict, b: JDict) -> JDict:
         return res
 
     else:
-        raise ValidationException(f"Invalid type => [{t}]")
+        raise ValidationException(f"Invalid type => [{type(a)}]")
 
 
 def validate(a: JDict):
