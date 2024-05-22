@@ -173,7 +173,7 @@ def validate(a: JDict):
     elif isinstance(a, dict):
         for k, v in a.items():
             if not isinstance(k, str):
-                raise ValidationException(f"Invalid type => [{type(a)}]")
+                raise ValidationException(f"Invalid key type => [{type(a)}], only type str accepted")
             validate(v)
     else:
         raise ValidationException(f"Invalid type => [{type(a)}]")
