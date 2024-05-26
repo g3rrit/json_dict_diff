@@ -11,4 +11,4 @@ fi
 source .venv/bin/activate
 pip install --upgrade twine
 
-python -m twine upload -r pypi dist/*
+python -m twine upload --verbose -u __token__ -p "$PYPI_TOKEN" -r pypi dist/*
