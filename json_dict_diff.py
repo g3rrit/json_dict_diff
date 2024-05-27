@@ -37,7 +37,7 @@ def _similarity_score(a: JDict, b: JDict) -> float:
         if not a or not b:
             return 0.5
 
-        # Find best match witch score matrix,
+        # Find best match with score matrix,
         # remove best match and find best score again of the reduced lists
         score_matrix = []
 
@@ -124,7 +124,7 @@ def _diff(a: JDict, b: JDict) -> JDict:
                     res.append(d)
                 del b_updated[b_found]
 
-        # Add remaining elements in bas newly created
+        # Add remaining elements in b as newly created
         for v2 in b_updated:
             if v2 is not None:
                 res.append((None, v2))
@@ -154,13 +154,13 @@ def _diff(a: JDict, b: JDict) -> JDict:
         return res
 
     else:
-        raise ValidationException(f"Invalid type => [{t}]")
+        raise ValidationException(f"Invalid type => [{type(a)}]")
 
 
 def validate(a: JDict):
     """
-    This function can be used to validate the type of a JDict object at runtime,
-    If the JDict contains a invalid type, a `ValidationException` is raised.
+    This function can be used to validate the type of a JDict object at runtime.
+    If the JDict contains an invalid type, a `ValidationException` is raised.
     """
     if a is None:
         return
@@ -173,7 +173,7 @@ def validate(a: JDict):
     elif isinstance(a, dict):
         for k, v in a.items():
             if not isinstance(k, str):
-                raise ValidationException(f"Invalid type => [{type(a)}]")
+                raise ValidationException(f"Invalid key type => [{type(a)}], only type str accepted")
             validate(v)
     else:
         raise ValidationException(f"Invalid type => [{type(a)}]")
@@ -182,8 +182,8 @@ def validate(a: JDict):
 def diff(a: JDict, b: JDict) -> JDict:
     """
     This function can be used to diff two dictionaries.
-    The diff is represented as a dictionary where insertions/deletions/substititons are represented as tuples.
-    E.g the following two dictionaries:
+    The diff is represented as a dictionary where insertions/deletions/substitutions are represented as tuples.
+    For example the following two dictionaries:
 
     ```py
     diff(
@@ -198,8 +198,8 @@ def diff(a: JDict, b: JDict) -> JDict:
     { "a": [ { "b": (1, 2) }, ("x", "y"), (None, True) ], "d": (1, None) }
     ```
 
-    Here the tuples `(1, 2), ("x", "y"), (None, True), (1, None)` represent the substitions that happened.
-    `None` implies that a object was either removed or added.
+    Here the tuples `(1, 2), ("x", "y"), (None, True), (1, None)` represent the substitutions that happened.
+    `None` implies that an object was either removed or added.
 
     If there is no diff (e.g.: `diff({ "a": 1 }, { "a": 1 })`) the result will be `None`. In this sense,
     this function can also be used to compare two json-compatible dictionaries.
